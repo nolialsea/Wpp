@@ -1,3 +1,26 @@
+<style>
+    div.dropzone {
+        /* positions to point 0,0 - required for z-index */
+        position: fixed;
+        top: 0;
+        left: 0;
+        /* above all elements, even if z-index is used elsewhere
+           it can be lowered as needed, but this value surpasses
+           all elements when used on YouTube for example. */
+        z-index: 9999999999;
+        /* takes up 100% of page */
+        width: 100%;
+        height: 100%;
+        /* dim the page with 50% black background when visible */
+        background-color: rgba(0, 0, 0, 0.5);
+        /* a nice fade effect, visibility toggles after 175ms, opacity will animate for 175ms. note display:none cannot be animated.  */
+        transition: visibility 175ms, opacity 175ms;
+    }
+</style>
+<!-- both visibility:hidden and display:none can be used,
+     but the former can be used in CSS animations -->
+<div style="visibility:hidden; opacity:0" class="dropzone" ondrop="dropHandler(e)"></div>
+
 <label for="selectFormat">Format to use: </label>
 <select id="selectFormat">
     <option value="wpp" selected>W++</option>
@@ -146,6 +169,47 @@
         }
     }
 
+    window.addEventListener("drop", dropHandler)
+
+    async function dropHandler(ev) {
+
+        let text
+        // Prevent default behavior (Prevent file from being opened)
+        ev.preventDefault();
+
+        if (ev.dataTransfer.items) {
+            // Use DataTransferItemList interface to access the file(s)
+            for (let i = 0; i < ev.dataTransfer.items.length; i++) {
+                // If dropped items aren't files, reject them
+                if (ev.dataTransfer.items[i].kind === 'file') {
+                    const file = ev.dataTransfer.items[i].getAsFile();
+                    if (file.name.toLowerCase().endsWith('.json')) {
+                        text = await file.text()
+                    }
+                }
+            }
+        } else {
+            // Use DataTransfer interface to access the file(s)
+            for (let i = 0; i < ev.dataTransfer.files.length; i++) {
+                const file = ev.dataTransfer.files[i]
+                text = await file.text()
+            }
+        }
+
+        loadJSONFromFile(text)
+
+    }
+
+    function loadJSONFromFile(text) {
+        const json = JSON.parse(text)
+        if (json.type && json.name) {
+            textareaJSONOutput.value = JSON.stringify(json, null, 4)
+            loadFromJSON()
+            updateTable()
+            parseResult()
+        }
+    }
+
     function parseResult() {
         const objectName = document.getElementById("objectName").value
         const objectType = document.getElementById("objectType").value
@@ -160,12 +224,17 @@
         const propertyStrings = []
         for (let i = 1; i < rowLength - 1; i++) {
             const propertyName = document.getElementById(`input${i - 1};${0}`).value
+            if (!propertyName) continue
+
             const propertyValues = []
             let oCells = table.rows.item(i).cells;
             let cellLength = oCells.length;
 
             for (let j = 1; j < cellLength - 1; j++) {
-                propertyValues.push(document.getElementById(`input${i - 1};${j}`).value)
+                const val = document.getElementById(`input${i - 1};${j}`).value
+                if (val) {
+                    propertyValues.push(val)
+                }
             }
 
             jsonObject.properties[propertyName] = propertyValues
@@ -199,7 +268,7 @@
             for (let i = 0; i < json.properties[propertyName].length; i++) {
                 if (i + 1 >= table.tHead.rows.item(0).cells.length) {
                     const newThead = document.createElement("TH")
-                    newThead.innerHTML = `Value${i}`
+                    newThead.innerHTML = `Value${i+1}`
                     table.tHead.rows.item(0).appendChild(newThead)
                 }
 
