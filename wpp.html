@@ -1,0 +1,186 @@
+<label for="checkboxQuotes">Add quotes to properties?</label>
+<input type="checkbox" id="checkboxQuotes" checked="checked">
+<br/>
+<label for="oneLineFormat">One line format</label>
+<input type="checkbox" id="oneLineFormat">
+
+<br/><br/>
+
+<table>
+    <tr>
+        <td>
+            <label for="objectType">Type</label>
+        </td>
+        <td>
+            <input id="objectType">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <label for="objectName">Name</label>
+        </td>
+        <td>
+            <input id="objectName">
+        </td>
+    </tr>
+</table>
+
+<br/>
+
+<table id="table">
+    <thead>
+    <tr id="theadCells">
+        <th>Name</th>
+        <th>Value1</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr id="tr0">
+        <td><input id="input0;0"></td>
+        <td><input id="input0;1"></td>
+    </tr>
+    </tbody>
+</table>
+
+<br/><br/>
+
+<label for="textareaOutput">W++ result:</label>
+<br/><textarea id="textareaOutput" style="width: 100%; height: 100px"></textarea>
+
+<br/><br/>
+
+<label for="textareaJSONOutput">JSON:</label>
+<br/><textarea id="textareaJSONOutput" style="width: 100%; height: 100px"></textarea>
+
+<button onclick="loadFromJSON()">Load from JSON</button>
+
+<script>
+    const checkboxQuotes = document.getElementById("checkboxQuotes")
+    const oneLineFormat = document.getElementById("oneLineFormat")
+    const textareaOutput = document.getElementById("textareaOutput")
+    const textareaJSONOutput = document.getElementById("textareaJSONOutput")
+    const objectName = document.getElementById("objectName")
+    const objectType = document.getElementById("objectType")
+
+    const table = document.getElementById("table")
+
+    function getStartTimerFunction() {
+        let timer
+
+        return () => {
+            if (timer) {
+                clearTimeout(timer)
+            }
+            timer = setTimeout(() => {
+                updateTable()
+                parseResult()
+            }, 250)
+        }
+    }
+
+    let startUpdateTimer = getStartTimerFunction()
+
+    table.onkeydown = startUpdateTimer
+    table.onclick = startUpdateTimer
+    checkboxQuotes.onclick = startUpdateTimer
+    oneLineFormat.onclick = startUpdateTimer
+    objectName.onclick = startUpdateTimer
+    objectName.onkeydown = startUpdateTimer
+    objectType.onclick = startUpdateTimer
+    objectType.onkeydown = startUpdateTimer
+
+    function parseResult() {
+        const objectName = document.getElementById("objectName").value
+        const objectType = document.getElementById("objectType").value
+        let jsonObject = {type: objectType, name: objectName, properties: {}}
+        let rowLength = table.rows.length;
+        const parsedObjectName = checkboxQuotes.checked ? `"${objectName}"` : objectName
+        let stringResult = `${objectType}(${parsedObjectName})${oneLineFormat.checked ? ' ' : '\n'}{${oneLineFormat.checked ? ' ' : '\n'}`
+
+        const propertyStrings = []
+        for (let i = 1; i < rowLength - 1; i++) {
+            const propertyName = document.getElementById(`input${i - 1};${0}`).value
+            const propertyValues = []
+            let oCells = table.rows.item(i).cells;
+            let cellLength = oCells.length;
+
+            for (let j = 1; j < cellLength - 1; j++) {
+                propertyValues.push(document.getElementById(`input${i - 1};${j}`).value)
+            }
+
+            jsonObject.properties[propertyName] = propertyValues
+
+            const propertiesValue = propertyValues
+                .map(pv => checkboxQuotes.checked ? `"${pv}"` : pv)
+                .join(' + ')
+            propertyStrings.push(`${propertyName}(${propertiesValue})`)
+        }
+
+        stringResult += propertyStrings.join(oneLineFormat.checked ? ', ' : '\n') + `${oneLineFormat.checked ? ' ' : '\n'}}`
+
+        textareaOutput.value = stringResult
+        textareaJSONOutput.value = JSON.stringify(jsonObject, null, 4)
+    }
+
+
+    function loadFromJSON() {
+        const json = JSON.parse(textareaJSONOutput.value)
+        document.getElementById("objectName").value = json.name
+        document.getElementById("objectType").value = json.type
+
+        table.innerHTML = `<thead><tr id="theadCells"><th>Name</th><th>Value1</th></tr></thead>`
+
+        for (let propertyName of Object.keys(json.properties)) {
+            const newRow = table.insertRow()
+            newRow.id = `tr${table.rows.length - 1}`
+
+            let newCell
+            newCell = newRow.insertCell()
+            newCell.innerHTML = `<input id="input${table.rows.length - 2};${0}" value="${propertyName}">`
+            for (let i = 0; i < json.properties[propertyName].length; i++) {
+                if (i + 1 >= table.tHead.rows.item(0).cells.length) {
+                    const newThead = document.createElement("TH")
+                    newThead.innerHTML = `Value${i}`
+                    table.tHead.rows.item(0).appendChild(newThead)
+                }
+
+                newCell = newRow.insertCell()
+                newCell.innerHTML = `<input id="input${table.rows.length - 2};${i + 1}" value="${json.properties[propertyName][i]}">`
+            }
+        }
+    }
+
+    function updateTable() {
+        let rowLength = table.rows.length;
+
+        for (let i = rowLength - 1; i >= 1; i--) {
+            let oCells = table.rows.item(i).cells;
+            let cellLength = oCells.length;
+
+
+            for (let j = cellLength - 1; j >= 0; j--) {
+                const input = document.getElementById(`input${i - 1};${j}`)
+
+                // adds new line
+                if (j === 0 && i === rowLength - 1 && input?.value?.trim()) {
+                    const newRow = table.insertRow()
+                    const newCell = newRow.insertCell()
+                    newRow.id = `tr${i}`
+                    newCell.innerHTML = `<input id="input${i};${0}" value="">`
+                }
+
+                // adds new cell
+                if (j === cellLength - 1 && input?.value?.trim()) {
+                    if (j + 1 >= table.tHead.rows.item(0).cells.length) {
+                        const newThead = document.createElement("TH")
+                        newThead.innerHTML = `Value${j + 1}`
+                        table.tHead.rows.item(0).appendChild(newThead)
+                    }
+
+                    const newCell = table.rows.item(i).insertCell()
+                    newCell.innerHTML = `<input id="input${i - 1};${cellLength}" value="">`
+                }
+            }
+        }
+    }
+</script>
