@@ -304,6 +304,7 @@
 
             for (let j = cellLength - 1; j >= 0; j--) {
                 const input = document.getElementById(`input${i - 1};${j}`)
+                const leftInput = document.getElementById(`input${i - 1};${j - 1}`)
 
                 // adds new line
                 if (j === 0 && i === rowLength - 1 && input?.value?.trim()) {
@@ -323,6 +324,22 @@
 
                     const newCell = table.rows.item(i).insertCell()
                     newCell.innerHTML = `<input id="input${i - 1};${cellLength}" value="">`
+                } else if (j === cellLength - 1 && !input?.value?.trim() && leftInput && !leftInput?.value?.trim()) {
+                    table.rows.item(i).deleteCell(j)
+
+                    let maxAttributes = 0
+                    for (let k = 1; k < table.rows.length; k++) {
+                        if (table.rows.item(k).cells.length >= maxAttributes) {
+                            maxAttributes = table.rows.item(k).cells.length
+                        }
+                    }
+
+                    console.log("j", j)
+                    console.log("maxAttributes", maxAttributes)
+                    if (j >= maxAttributes) {
+                        console.log("table.tHead.rows.item(0).deleteCell(j)")
+                        table.tHead.rows.item(0).deleteCell(j)
+                    }
                 }
             }
         }
