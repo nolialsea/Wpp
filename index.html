@@ -6,6 +6,9 @@
 <br/>
 <label for="squareBracketsEncasing">Square brackets encasing</label>
 <input type="checkbox" id="squareBracketsEncasing" checked="checked">
+<br/>
+<label for="alternativeSquareBracketFormat">Alternative square brackets format</label>
+<input type="checkbox" id="alternativeSquareBracketFormat">
 
 <br/><br/>
 
@@ -33,7 +36,7 @@
 <table id="table">
     <thead>
     <tr id="theadCells">
-        <th>Name</th>
+        <th>Attribute</th>
         <th>Value1</th>
     </tr>
     </thead>
@@ -61,6 +64,7 @@
     const checkboxQuotes = document.getElementById("checkboxQuotes")
     const oneLineFormat = document.getElementById("oneLineFormat")
     const squareBracketsEncasing = document.getElementById("squareBracketsEncasing")
+    const alternativeSquareBracketFormat = document.getElementById("alternativeSquareBracketFormat")
     const textareaOutput = document.getElementById("textareaOutput")
     const textareaJSONOutput = document.getElementById("textareaJSONOutput")
     const objectName = document.getElementById("objectName")
@@ -72,10 +76,10 @@
         let timer
 
         return (e) => {
-            if (e.key === "Tab"){
+            if (e.key === "Tab") {
                 updateTable()
                 parseResult()
-            }else {
+            } else {
                 if (timer) {
                     clearTimeout(timer)
                 }
@@ -94,6 +98,7 @@
     checkboxQuotes.onclick = startUpdateTimer
     oneLineFormat.onclick = startUpdateTimer
     squareBracketsEncasing.onclick = startUpdateTimer
+    alternativeSquareBracketFormat.onclick = startUpdateTimer
     objectName.onclick = startUpdateTimer
     objectName.onkeydown = startUpdateTimer
     objectType.onclick = startUpdateTimer
@@ -105,7 +110,11 @@
         let jsonObject = {type: objectType, name: objectName, properties: {}}
         let rowLength = table.rows.length;
         const parsedObjectName = checkboxQuotes.checked ? `"${objectName}"` : objectName
-        let stringResult = `${objectType}(${parsedObjectName})${oneLineFormat.checked ? ' ' : '\n'}{${oneLineFormat.checked ? ' ' : '\n'}`
+
+        const spaceOrNewLine = oneLineFormat.checked ? ' ' : '\n'
+        let stringResult = alternativeSquareBracketFormat.checked ?
+            `${objectType}: ${parsedObjectName};`
+            : `${objectType}(${parsedObjectName})${spaceOrNewLine}{${spaceOrNewLine}`
 
         const propertyStrings = []
         for (let i = 1; i < rowLength - 1; i++) {
@@ -122,13 +131,21 @@
 
             const propertiesValue = propertyValues
                 .map(pv => checkboxQuotes.checked ? `"${pv}"` : pv)
-                .join(' + ')
-            propertyStrings.push(`${propertyName}(${propertiesValue})`)
+                .join(alternativeSquareBracketFormat.checked ? `, ` : ` + `)
+            propertyStrings.push(
+                alternativeSquareBracketFormat.checked ?
+                    `${propertyName}: ${propertiesValue}`
+                    : `${propertyName}(${propertiesValue})`
+            )
         }
 
-        stringResult += propertyStrings.join(oneLineFormat.checked ? ', ' : '\n') + `${oneLineFormat.checked ? ' ' : '\n'}}`
+        stringResult += alternativeSquareBracketFormat.checked ?
+            ` ${propertyStrings.join(`; `)}`
+            : `${propertyStrings.join(oneLineFormat.checked ? ', ' : '\n')}${spaceOrNewLine}}`
 
-        textareaOutput.value = squareBracketsEncasing.checked ? `[${stringResult}]` : stringResult
+        textareaOutput.value = alternativeSquareBracketFormat.checked ?
+            `[ ${stringResult} ]`
+            : squareBracketsEncasing.checked ? `[${stringResult}]` : stringResult
         textareaJSONOutput.value = JSON.stringify(jsonObject, null, 4)
     }
 
@@ -138,7 +155,7 @@
         document.getElementById("objectName").value = json.name
         document.getElementById("objectType").value = json.type
 
-        table.innerHTML = `<thead><tr id="theadCells"><th>Name</th><th>Value1</th></tr></thead>`
+        table.innerHTML = `<thead><tr id="theadCells"><th>Attribute</th><th>Value1</th></tr></thead>`
 
         for (let propertyName of Object.keys(json.properties)) {
             const newRow = table.insertRow()
