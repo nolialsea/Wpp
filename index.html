@@ -71,14 +71,19 @@
     function getStartTimerFunction() {
         let timer
 
-        return () => {
-            if (timer) {
-                clearTimeout(timer)
-            }
-            timer = setTimeout(() => {
+        return (e) => {
+            if (e.key === "Tab"){
                 updateTable()
                 parseResult()
-            }, 250)
+            }else {
+                if (timer) {
+                    clearTimeout(timer)
+                }
+                timer = setTimeout(() => {
+                    updateTable()
+                    parseResult()
+                }, 250)
+            }
         }
     }
 
