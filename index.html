@@ -3,6 +3,9 @@
 <br/>
 <label for="oneLineFormat">One line format</label>
 <input type="checkbox" id="oneLineFormat">
+<br/>
+<label for="squareBracketsEncasing">Square brackets encasing</label>
+<input type="checkbox" id="squareBracketsEncasing">
 
 <br/><br/>
 
@@ -57,6 +60,7 @@
 <script>
     const checkboxQuotes = document.getElementById("checkboxQuotes")
     const oneLineFormat = document.getElementById("oneLineFormat")
+    const squareBracketsEncasing = document.getElementById("squareBracketsEncasing")
     const textareaOutput = document.getElementById("textareaOutput")
     const textareaJSONOutput = document.getElementById("textareaJSONOutput")
     const objectName = document.getElementById("objectName")
@@ -118,7 +122,7 @@
 
         stringResult += propertyStrings.join(oneLineFormat.checked ? ', ' : '\n') + `${oneLineFormat.checked ? ' ' : '\n'}}`
 
-        textareaOutput.value = stringResult
+        textareaOutput.value = squareBracketsEncasing.checked ? `[${stringResult}]` : stringResult
         textareaJSONOutput.value = JSON.stringify(jsonObject, null, 4)
     }
 
