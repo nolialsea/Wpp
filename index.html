@@ -1,14 +1,23 @@
-<label for="checkboxQuotes">Add quotes to values?</label>
-<input type="checkbox" id="checkboxQuotes" checked="checked">
-<br/>
-<label for="oneLineFormat">One line format</label>
-<input type="checkbox" id="oneLineFormat">
-<br/>
-<label for="squareBracketsEncasing">Square brackets encasing</label>
-<input type="checkbox" id="squareBracketsEncasing" checked="checked">
-<br/>
-<label for="alternativeSquareBracketFormat">Alternative square brackets format</label>
-<input type="checkbox" id="alternativeSquareBracketFormat">
+<label for="selectFormat">Format to use: </label>
+<select id="selectFormat">
+    <option value="wpp" selected>W++</option>
+    <option value="sbf">Square Bracket Format (SBF)</option>
+</select>
+
+<br/><br/>
+
+<div id="optionQuotes" class="formatOption">
+    <label for="checkboxQuotes">Add quotes to values?</label>
+    <input type="checkbox" id="checkboxQuotes" checked="checked">
+</div>
+<div id="optionOneLine" class="formatOption">
+    <label for="oneLineFormat">One line format</label>
+    <input type="checkbox" id="oneLineFormat">
+</div>
+<div id="optionSquareBracketsEncasing" class="formatOption">
+    <label for="squareBracketsEncasing">Square brackets encasing</label>
+    <input type="checkbox" id="squareBracketsEncasing" checked="checked">
+</div>
 
 <br/><br/>
 
@@ -50,7 +59,7 @@
 
 <br/><br/>
 
-<label for="textareaOutput">W++ result:</label>
+<label for="textareaOutput"><span id="spanFormatName">W++</span> result:</label>
 <br/><textarea id="textareaOutput" style="width: 100%; height: 100px"></textarea>
 
 <br/><br/>
@@ -61,10 +70,11 @@
 <button onclick="loadFromJSON()">Load from JSON</button>
 
 <script>
+    const selectFormat = document.getElementById("selectFormat")
+    const spanFormatName = document.getElementById("spanFormatName")
     const checkboxQuotes = document.getElementById("checkboxQuotes")
     const oneLineFormat = document.getElementById("oneLineFormat")
     const squareBracketsEncasing = document.getElementById("squareBracketsEncasing")
-    const alternativeSquareBracketFormat = document.getElementById("alternativeSquareBracketFormat")
     const textareaOutput = document.getElementById("textareaOutput")
     const textareaJSONOutput = document.getElementById("textareaJSONOutput")
     const objectName = document.getElementById("objectName")
@@ -91,6 +101,29 @@
         }
     }
 
+    const formats = {
+        wpp: {
+            name: `W++`,
+            options: ['optionQuotes', 'optionOneLine', `optionSquareBracketsEncasing`],
+            getPrefix: (objectType, parsedObjectName, spaceOrNewLine) => `${objectType}(${parsedObjectName})${spaceOrNewLine}{${spaceOrNewLine}`,
+            getValuesSeparator: () => ` + `,
+            getAttributeSeparator: (isOneLineFormat) => isOneLineFormat ? ', ' : '\n',
+            addAttribute: (propertyName, propertiesValue) => `${propertyName}(${propertiesValue})`,
+            appendAttributes: (propertyStrings, spaceOrNewLine) => `${propertyStrings.join(formats[selectFormat.value].getAttributeSeparator(oneLineFormat.checked))}${spaceOrNewLine}}`,
+            finalize: (stringResult, addSquareBrackets) => addSquareBrackets ? `[${stringResult}]` : stringResult
+        },
+        sbf: {
+            name: `Square Brackets Format`,
+            options: ['optionQuotes'],
+            getPrefix: (objectType, parsedObjectName) => `${objectType}: ${parsedObjectName};`,
+            getValuesSeparator: () => `, `,
+            getAttributeSeparator: () => `; `,
+            addAttribute: (propertyName, propertiesValue) => `${propertyName}: ${propertiesValue}`,
+            appendAttributes: (propertyStrings) => ` ${propertyStrings.join(formats[selectFormat.value].getAttributeSeparator())}`,
+            finalize: (stringResult) => `[ ${stringResult} ]`
+        }
+    }
+
     let startUpdateTimer = getStartTimerFunction()
 
     table.onkeydown = startUpdateTimer
@@ -98,11 +131,20 @@
     checkboxQuotes.onclick = startUpdateTimer
     oneLineFormat.onclick = startUpdateTimer
     squareBracketsEncasing.onclick = startUpdateTimer
-    alternativeSquareBracketFormat.onclick = startUpdateTimer
     objectName.onclick = startUpdateTimer
     objectName.onkeydown = startUpdateTimer
     objectType.onclick = startUpdateTimer
     objectType.onkeydown = startUpdateTimer
+    selectFormat.onchange = startUpdateTimer
+    selectFormat.onclick = startUpdateTimer
+
+    selectFormat.onchange = () => {
+        spanFormatName.innerHTML = formats[selectFormat.value].name
+        const elems = document.getElementsByClassName(`formatOption`)
+        for (let i = 0; i < elems.length; i++) {
+            elems.item(i).hidden = !formats[selectFormat.value].options.includes(elems.item(i).id)
+        }
+    }
 
     function parseResult() {
         const objectName = document.getElementById("objectName").value
@@ -112,9 +154,8 @@
         const parsedObjectName = checkboxQuotes.checked ? `"${objectName}"` : objectName
 
         const spaceOrNewLine = oneLineFormat.checked ? ' ' : '\n'
-        let stringResult = alternativeSquareBracketFormat.checked ?
-            `${objectType}: ${parsedObjectName};`
-            : `${objectType}(${parsedObjectName})${spaceOrNewLine}{${spaceOrNewLine}`
+
+        let stringResult = formats[selectFormat.value].getPrefix(objectType, parsedObjectName, spaceOrNewLine)
 
         const propertyStrings = []
         for (let i = 1; i < rowLength - 1; i++) {
@@ -131,24 +172,15 @@
 
             const propertiesValue = propertyValues
                 .map(pv => checkboxQuotes.checked ? `"${pv}"` : pv)
-                .join(alternativeSquareBracketFormat.checked ? `, ` : ` + `)
-            propertyStrings.push(
-                alternativeSquareBracketFormat.checked ?
-                    `${propertyName}: ${propertiesValue}`
-                    : `${propertyName}(${propertiesValue})`
-            )
+                .join(formats[selectFormat.value].getValuesSeparator())
+
+            propertyStrings.push(formats[selectFormat.value].addAttribute(propertyName, propertiesValue))
         }
 
-        stringResult += alternativeSquareBracketFormat.checked ?
-            ` ${propertyStrings.join(`; `)}`
-            : `${propertyStrings.join(oneLineFormat.checked ? ', ' : '\n')}${spaceOrNewLine}}`
-
-        textareaOutput.value = alternativeSquareBracketFormat.checked ?
-            `[ ${stringResult} ]`
-            : squareBracketsEncasing.checked ? `[${stringResult}]` : stringResult
+        stringResult += formats[selectFormat.value].appendAttributes(propertyStrings, spaceOrNewLine)
+        textareaOutput.value = formats[selectFormat.value].finalize(stringResult, squareBracketsEncasing.checked)
         textareaJSONOutput.value = JSON.stringify(jsonObject, null, 4)
     }
-
 
     function loadFromJSON() {
         const json = JSON.parse(textareaJSONOutput.value)
